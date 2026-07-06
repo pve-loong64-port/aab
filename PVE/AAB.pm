@@ -272,6 +272,7 @@ HoldPkg = pacman glibc
 Architecture = $arch
 CheckSpace
 SigLevel = $siglevel
+DisableSandbox
 
 [core]
 $servers
@@ -553,10 +554,10 @@ sub bootstrap {
 
     print "Installing package manager and essentials...\n";
     # inetutils for 'hostname' for our init
-    $self->run_command([@pacman, '-S', 'pacman', 'inetutils', 'archlinux-keyring']);
+    $self->run_command([@pacman, '-S', 'pacman', 'inetutils', 'archlinux-keyring', 'archlinux-lcpu-keyring']);
 
     print "Setting up pacman for installation from cache...\n";
-    my $file = "$root/etc/pacman.d/mirrorlist";
+    my $file = "$root/etc/pacman.d/mirrorlist-loong64";
     my $backup = "${file}.aab_orig";
     if (!-f $backup) {
 	rename_file($file, $backup);
@@ -680,13 +681,13 @@ sub finalize {
     $self->stop_container();
 
     print "Rolling back mirrorlist changes...\n";
-    my $file = "$rootdir/etc/pacman.d/mirrorlist";
+    my $file = "$rootdir/etc/pacman.d/mirrorlist-loong64";
     unlink $file;
     rename_file($file.'.aab_orig', $file);
 
     # experienced user can change it anytime and others do well to start out with an updatable system..
     my $mirrors = eval { read_file($file) } // '';
-    $mirrors = "\nServer = https://geo.mirror.pkgbuild.com/\$repo/os/\$arch\n\n" . $mirrors;
+    $mirrors = "\nServer = https://geo.mirror.pkgbuild.com/\$repo/os/\$arch\n\n" . $mirrors if $self->{config}->{architecture} ne 'loong64';
     write_file($mirrors, $file, 0644);
 
     print "Removing weak temporary pacman keyring...\n";
